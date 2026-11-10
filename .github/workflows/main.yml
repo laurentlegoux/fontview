@@ -1,0 +1,51 @@
+name: Build MPK  
+  
+on:  
+  push:  
+    tags: ["v*"]              # git tag v0.2.0 && git push --tags  
+  release:  
+    types: [published]        # "Draft a new release" in the GitHub UI  
+  workflow_dispatch:          # manual run from the Actions tab  
+  
+jobs:  
+  mpk:  
+    runs-on: ubuntu-latest  
+    permissions:  
+      contents: write         # needed by action-gh-release  
+    steps:  
+      - uses: actions/checkout@v4  
+  
+      - name: Build MPK  
+        run: |  
+          set -eux  
+          if [ -f MANIFEST.JSON ]; then  
+            manifest=MANIFEST.JSON  
+          elif [ -f META-INF/MANIFEST.JSON ]; then  
+            manifest=META-INF/MANIFEST.JSON  
+          else  
+            echo "No MANIFEST.JSON found at repo root"; ls -la; exit 1  
+          fi  
+          appdir=$(jq -r '.fullname' "$manifest")  
+          version=$(jq -r '.version' "$manifest")  
+          mpk="${appdir}_${version}.mpk"  
+          tmp=$(mktemp -d)  
+          mkdir -p "$tmp/$appdir"  
+          cp -r . "$tmp/$appdir"  
+          rm -rf "$tmp/$appdir/.git" "$tmp/$appdir/.github"  
+          find "$tmp/$appdir" -exec touch -t 202501010000.00 {} \;  
+          (cd "$tmp" && (find -L "$appdir" -type d; find -L "$appdir" -type f) | grep -v '.git/' | sort | TZ=CET zip -X -r0 "$GITHUB_WORKSPACE/$mpk" -@)  
+          echo "== verify =="; unzip -l "$mpk" | head -5  
+          echo "MPK=$mpk" >> "$GITHUB_ENV"  
+  
+      - uses: actions/upload-artifact@v4  
+        with:  
+          name: mpk  
+          path: "*.mpk"  
+  
+      - name: Upload MPK to release  
+        if: github.event_name != 'workflow_dispatch'  
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2  
+        with:  
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref_name }}  
+          files: "*.mpk"  
+          generate_release_notes: true
