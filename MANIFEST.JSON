@@ -1,0 +1,22 @@
+{
+  "name": "font View",
+  "publisher": "Laurent Legoux",
+  "short_description": "Show all Fonts",
+  "long_description": "Show all installed fonts and glyphs",
+  "fullname": "fontview",
+  "version": "0.1.0",
+  "category": "development",
+  "activities": [
+    {
+      "entrypoint": "fontview.py",
+      "classname": "fontview",
+      "intent_filters": [
+        {
+          "action": "main",
+          "category": "launcher"
+        },
+          { "action": "view", "mimeType": "font/ttf", "pathPattern": [".ttf"] }
+      ]
+    }
+  ]
+}
